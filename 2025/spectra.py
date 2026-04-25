@@ -9,27 +9,31 @@ from shapely import contains_xy
 from spectral.io import envi
 import rasterio
 
-fp = '/store/carroll/col/data/extractions/CRBU2018_AOP_Crowns.geojson'
+fp = '/store/carroll/col/data/extractions/crown_delineation_all.geojson'
 plots = gpd.read_file(fp)
-plots = plots.rename(columns={'SiteCode': 'plot_name'})
-plots['campaign_name'] = 'East River 2018'
+plots = plots.rename(columns={'site_number': 'plot_name'})
+
+plots['campaign_name'] = 'Colorado Headwaters Ecological Spectroscopy Study'
 plots['sensor_name'] = 'NEON AIS 1'
 plots = plots[['plot_name', 'campaign_name', 'sensor_name', 'geometry']]
 plots = plots.to_crs(epsg=32613)
 poly = plots.geometry.union_all()
 
 dfs = []
-fps = glob(f'/store/carroll/col/data/2018/raw/L1/radianceH5/*/NEON_D13_CRBU_DP1_*_radiance.h5')
+fps = glob(f'/store/carroll/col/data/2025/raw/L1/radianceH5/*/NEON_D13_*_radiance.h5')
 
 for fp in fps:
-    date = os.path.basename(fp).split('_')[4]
-    time = os.path.basename(fp).split('_')[5]
-    fid = f'NIS01_{date}_{time}'
+    domain = os.path.basename(fp).split('_')[2]
+    with h5py.File(fp, "r") as f:
+        time = f[f'/{domain}/Radiance'].attrs['Acquisition_Time']
+    acquistion_date = time.split(',')[0]
+    acquistion_start_time = time.split(',')[1].replace('[Computer Time in sec]', '').strip()
+    fid = f'NIS01_{acquistion_date.replace("-", "")}_{acquistion_start_time}'
     print(fid)
 
     # get rows and cols of px within plot polys
     with h5py.File(fp, "r") as f:
-        igm = f['/CRBU/Radiance/Metadata/Ancillary_Rasters/IGM_Data'][:]
+        igm = f[f'/{domain}/Radiance/Metadata/Ancillary_Rasters/IGM_Data'][:]
     x = igm[:, :, 0]
     y = igm[:, :, 1]
     inside = contains_xy(poly, x, y)
@@ -47,7 +51,7 @@ for fp in fps:
 
     # obs
     with h5py.File(fp, "r") as f:
-        obs = f['/CRBU/Radiance/Metadata/Ancillary_Rasters/OBS_Data'][:]
+        obs = f[f'/{domain}/Radiance/Metadata/Ancillary_Rasters/OBS_Data'][:]
     obs = obs[rows, cols, :]
     path_length = obs[:, 0]
     to_sensor_azimuth = obs[:, 1]
@@ -62,7 +66,8 @@ for fp in fps:
     del obs
 
     # glt
-    glt = envi.open(glob(f'/store/carroll/col/data/2018/raw/L1/radianceENVI/*/{fid}_rdn_ort_glt.hdr')[0]).open_memmap()
+    with h5py.File(fp, "r") as f:
+        glt = f[f'/{domain}/Radiance/Metadata/Ancillary_Rasters/GLT_Data'][:]
     glt_col = glt[rows, cols, 0]
     glt_row = glt[rows, cols, 1]
 
@@ -106,7 +111,7 @@ for fp in fps:
     # add radiance
     rdns = []
     with h5py.File(fp, "r") as f:
-        rdn = f['/CRBU/Radiance/Radiance_Data']
+        rdn = f[f'/{domain}/Radiance/Radiance_Data']
         for i in range(len(rows)):
             rdn_ = rdn[rows[i], cols[i], :].reshape(1, -1)
             rdn_ = pd.DataFrame(rdn_, columns=[str(x) for x in range(rdn_.shape[-1])])

@@ -3,7 +3,7 @@ import pandas as pd
 import h5py
 
 # 2025
-fp = r"C:\Users\carroll\Downloads\2025_FullSite_D13_2025_CRBU_2_L1_Spectrometer_RadianceH5_2025062714_NEON_D13_CRBU_DP1_L003-1_20250627_radiance.h5"
+fp = '/store/carroll/col/data/2025/raw/L1/radianceH5/2025062115/NEON_D13_ALMO_DP1_L001-1_20250621_radiance.h5'
 with h5py.File(fp, "r") as f:
     wavelength = f["/CRBU/Radiance/Metadata/Spectral_Data/Wavelength"][:]
     fwhm = f["/CRBU/Radiance/Metadata/Spectral_Data/FWHM"][:]
@@ -12,8 +12,8 @@ sensor_name = 'NEON AIS 1'
 df = pd.DataFrame({
     'campaign_name': campaign_name,
     'sensor_name': sensor_name,
-    'band': range(1, len(wavelength) + 1),
+    'band': range(len(wavelength)),
     'wavelength': wavelength,
     'fwhm': fwhm
 })
-df.to_csv('out/2025/wavelengths.csv', index=False)
+df.to_csv('/store/carroll/sbgplants/out/2025/wavelengths.csv', index=False)
