@@ -14,7 +14,7 @@ sensor_name = 'NEON AIS 1'
 df = pd.DataFrame({
     'campaign_name': campaign_name,
     'sensor_name': sensor_name,
-    'band': range(1, len(wavelength) + 1),
+    'band': range(len(wavelength)),
     'wavelength': wavelength,
     'fwhm': fwhm
 })
@@ -30,7 +30,7 @@ sensor_name = 'NEON AIS 1'
 df = pd.DataFrame({
     'campaign_name': campaign_name,
     'sensor_name': sensor_name,
-    'band': range(1, len(wavelength) + 1),
+    'band': range(len(wavelength)),
     'wavelength': wavelength,
     'fwhm': fwhm
 })
