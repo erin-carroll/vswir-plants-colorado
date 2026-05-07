@@ -59,8 +59,8 @@ df = pd.DataFrame({
     'gsd': gsd,
     'raster_epsg': raster_epsg,
     'flightline_id': granule_ids,
-    'granule_rad_url': [None] * len(granule_ids),
-    'granule_refl_url': [None] * len(granule_ids)
+    'granule_rad_url': ['https://data.ess-dive.lbl.gov/datasets/doi:10.15485/3017966 '] * len(granule_ids),
+    'granule_refl_url': ['https://data.ess-dive.lbl.gov/datasets/doi:10.15485/3013527'] * len(granule_ids)
 })
 df.to_csv('/store/carroll/sbgplants/out/2018/granule_metadata.csv', index=False)
 print(df.shape)
