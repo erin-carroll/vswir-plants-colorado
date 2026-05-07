@@ -114,10 +114,11 @@ chem = pd.read_csv('data\\col_2018\\raw\\10.15485.1631278\\data\\CN_Results_Foli
 chem = chem.rename(columns={
     'SampleSiteCode':'plot_name',
     'N_weight_percent': 'Nitrogen',
-    'C_weight_percent': 'Carbon'
+    'C_weight_percent': 'Carbon',
+    'SampleID': 'sample_name',
     })
-chem = chem[['plot_name', 'd13C', 'Nitrogen', 'Carbon']]
-chem = chem.melt(id_vars=['plot_name'], var_name='trait', value_name='value').reset_index()
+chem = chem[['plot_name', 'sample_name', 'd13C', 'Nitrogen', 'Carbon']]
+chem = chem.melt(id_vars=['plot_name', 'sample_name'], var_name='trait', value_name='value').reset_index(drop=True)
 method = {
     'd13C': 'Chemical analysis',
     'Nitrogen': 'Chemical analysis',
@@ -139,56 +140,23 @@ chem['units'] = chem['trait'].map(units)
 chem['error'] = None
 chem['error_type'] = None
 
-df_chem = pd.merge(df, chem, on='plot_name', how='right', suffixes=('',''))
+df_ = df.drop(columns=['sample_name', 'CoverCode'])
+df_chem = pd.merge(df_, chem, on='plot_name', how='right', suffixes=('',''))
+df_chem.loc[df_chem['plot_veg_type']=='Meadow', 'taxa'] = 'Herbaceous aggregate sample'
+df_chem.loc[df_chem['plot_veg_type']=='Meadow', 'veg_or_cover_type'] = 'Herbaceous aggregate sample'
+df_chem.loc[df_chem['plot_veg_type']=='Meadow', 'sample_fc_class'] = 'pv'
+df_chem.loc[df_chem['plot_veg_type']=='Meadow', 'sample_fc_percent'] = 100
+df_chem = df_chem.drop_duplicates().reset_index(drop=True)
+
 df_chem.to_csv('out/2018/traits_chem.csv', index=False)
 
-# lma - meadow
-lma_meadow = pd.read_csv('data\\col_2018\\raw\\10.15485.1618132\\data\\lma_meadow_area_samples.csv')
-lma_meadow = lma_meadow[['SampleArea', 'SpeciesCode', 'Wet Weight (g)', 'Dry Weight (g)', 'LMA (g/m2)', 'LWC (%)']]
-lma_meadow = lma_meadow.rename(columns={
-    'SampleArea': 'SamplingArea',
-    'SpeciesCode': 'CoverCode',
-    'Wet Weight (g)': 'Wet weight',
-    'Dry Weight (g)': 'Dry weight',
-    'LMA (g/m2)': 'LMA',
-    'LWC (%)': 'LWC'})
-lma_meadow = lma_meadow.melt(id_vars=['SamplingArea', 'CoverCode'], var_name='trait', value_name='value').reset_index()
-method = {
-    'Wet weight': 'Weight based',
-    'Dry weight': 'Weight based',
-    'LMA': 'Weight based',
-    'LWC': 'Weight based'
-}
-lma_meadow['method'] = lma_meadow['trait'].map(method)
-handling = {
-    'Wet weight': 'Fresh',
-    'Dry weight': 'Oven dried',
-    'LMA': 'Oven dried', # ?
-    'LWC': 'Oven dried' # ?
-}
-lma_meadow['handling'] = lma_meadow['trait'].map(handling)
-units = {
-    'Wet weight': 'g',
-    'Dry weight': 'g',
-    'LMA': 'grams dry mass per g m2',
-    'LWC': 'percentage'
-}
-lma_meadow['units'] = lma_meadow['trait'].map(units)
-lma_meadow['error'] = None
-lma_meadow['error_type'] = None
-
-df_lma_meadow = pd.merge(df, lma_meadow, on=['SamplingArea', 'CoverCode'], how='outer', suffixes=('',''))
-df_lma_meadow.to_csv('out/2018/traits_lma_meadow.csv', index=False)
-
-df = pd.concat([df_lma_site, df_lma_meadow, df_chem], ignore_index=True)
-df = df[df['trait'].notna()]
+df = pd.concat([df_lma_site, df_chem], ignore_index=True)
 df = df[['plot_name', 'campaign_name', 'collection_date', 'plot_veg_type',
          'subplot_cover_method', 'floristic_survey',
          'sample_name', 'taxa', 'veg_or_cover_type', 'phenophase', 
          'sample_fc_class', 'sample_fc_percent', 'plant_status', 'canopy position',
          'trait', 'value', 'method', 'handling', 'units', 'error', 'error_type']]
 print(df.shape)
-print(df.columns)
 
 df.to_csv('out/2018/traits.csv', index=False)
 
