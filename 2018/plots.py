@@ -8,7 +8,7 @@ gdf = gpd.read_file(fp)
 gdf = gdf.rename(columns={'SiteCode': 'plot_name'})
 
 gdf['campaign_name'] = 'East River 2018'
-gdf['site_id'] = 'CRBU' # ?
+gdf['site_id'] = 'CRBU'
 gdf['extraction_method'] = 'Internal centroids'
 gdf['delineation_method'] = 'Posthoc'
 gdf['shape_aligned_to_granule'] = 'False'

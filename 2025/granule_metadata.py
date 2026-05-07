@@ -19,12 +19,15 @@ flightline_ids = []
 keep = pd.read_csv('/store/carroll/sbgplants/out/2025/spectra.csv')
 keep = keep['granule_id'].unique().tolist()
 
-fps = glob('/store/carroll/col/data/2025/raw/L1/radianceH5/*.h5')
+fps = glob('/store/carroll/col/data/2025/raw/L1/radianceH5/*/*.h5')
+print(len(fps))
+
 for fp in fps:
+    domain = os.path.basename(fp).split('_')[2]
     with h5py.File(fp, "r") as f:
-        time = f['CRBU/Radiance'].attrs['Acquisition_Time']
-        cloud_condition = f['CRBU/Radiance/RadianceDecimalPart'].attrs['Cloud conditions']
-        cloud_type = f['CRBU/Radiance/RadianceDecimalPart'].attrs['Cloud type']
+        time = f[f'{domain}/Radiance'].attrs['Acquisition_Time']
+        cloud_condition = f[f'{domain}/Radiance/RadianceDecimalPart'].attrs['Cloud conditions']
+        cloud_type = f[f'{domain}/Radiance/RadianceDecimalPart'].attrs['Cloud type']
     acquistion_date = time.split(',')[0]
     acquistion_start_time = time.split(',')[1].replace('[Computer Time in sec]', '').strip()
     granule_id = f'NIS01_{acquistion_date.replace("-", "")}_{acquistion_start_time}'
@@ -54,4 +57,4 @@ df = pd.DataFrame({
     'granule_rad_url': [None] * len(granule_ids),
     'granule_refl_url': [None] * len(granule_ids)
 })
-df.to_csv('out/2025/granule_metadata.csv', index=False)
+df.to_csv('/store/carroll/sbgplants/out/2025/granule_metadata.csv', index=False)
