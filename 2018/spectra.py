@@ -127,9 +127,11 @@ from pyproj import Transformer
 df = pd.read_csv('/store/carroll/sbgplants/out/2018/spectra.csv')
 # switch shade convention (0=shade, 1=sunlit -> 1=shade, 0=sunlit)
 df['shade_mask'] = 1-df['shade_mask']
-# remove negatives from glt row/col
+# remove negatives/duplicates from glt row/col
 df['glt_row'] = df['glt_row'].abs()
 df['glt_column'] = df['glt_column'].abs()
+df = df.drop_duplicates()
+
 # convert lat/lon to epsg 4326
 transformer = Transformer.from_crs("EPSG:32613", "EPSG:4326", always_xy=True)
 lon, lat = transformer.transform(df['lon'].values, df['lat'].values)
