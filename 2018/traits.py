@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import geopandas as gpd
 import numpy as np
 
 os.chdir('C:\\Users\\carroll\\Documents\\sbgplant')
@@ -66,7 +67,7 @@ fractional_cover = fractional_cover.rename(columns={'FractionalCover': 'sample_f
 
 fractional_cover = fractional_cover[['plot_name', 'sample_name', 'taxa', 'veg_or_cover_type', 'phenophase', 'sample_fc_class', 'sample_fc_percent', 'CoverCode']]
 
-df = pd.merge(df, fractional_cover, on='plot_name', how='right', suffixes=('',''))
+df = pd.merge(df, fractional_cover, on='plot_name', how='outer', suffixes=('',''))
 df['plant_status'] = 'Not recorded'
 df['canopy position'] = 'Not recorded'
 
@@ -107,7 +108,6 @@ lma_site['error'] = None
 lma_site['error_type'] = None
 
 df_lma_site = pd.merge(df, lma_site, left_on=['plot_name', 'CoverCode'], right_on=['plot_name', 'CoverCode'], how='right', suffixes=('',''))
-df_lma_site.to_csv('out/2018/traits_lma_site.csv', index=False)
 
 # traits - foliar chemistry
 chem = pd.read_csv('data\\col_2018\\raw\\10.15485.1631278\\data\\CN_Results_Foliar.csv')
@@ -148,8 +148,6 @@ df_chem.loc[df_chem['plot_veg_type']=='Meadow', 'sample_fc_class'] = 'pv'
 df_chem.loc[df_chem['plot_veg_type']=='Meadow', 'sample_fc_percent'] = 100
 df_chem = df_chem.drop_duplicates().reset_index(drop=True)
 
-df_chem.to_csv('out/2018/traits_chem.csv', index=False)
-
 df = pd.concat([df_lma_site, df_chem], ignore_index=True)
 df = df[['plot_name', 'campaign_name', 'collection_date', 'plot_veg_type',
          'subplot_cover_method', 'floristic_survey',
@@ -158,5 +156,10 @@ df = df[['plot_name', 'campaign_name', 'collection_date', 'plot_veg_type',
          'trait', 'value', 'method', 'handling', 'units', 'error', 'error_type']]
 print(df.shape)
 
-df.to_csv('out/2018/traits.csv', index=False)
+# filter traits to only where plot has a polygon
+plots = gpd.read_file('out/2018/plots.geojson')
+plots = plots['plot_name'].unique()
+df = df[df['plot_name'].isin(plots)].reset_index(drop=True)
+print(df.shape)
 
+df.to_csv('out/2018/traits.csv', index=False)
