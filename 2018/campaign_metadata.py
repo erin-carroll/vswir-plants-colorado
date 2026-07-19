@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 
+os.chdir('C:/Users/carroll/Documents/sbgplant')
+
 campaign_name = 'East River 2018'
 primary_funding_source = 'DOE'
 data_repository = 'ESS-DIVE'
@@ -8,7 +10,7 @@ taxa_system = None
 sensor_name = 'NEON AIS 1'
 elevation_source = 'NEON AOP Lidar'
 
-doi = ['10.15485/1618130', '10.15485/1618132', '10.15485/1631278', '10.15485/3017966', '10.15485/3013527']
+doi = ['10.15485/1618130', '10.15485/1618132', '10.15485/1631278', '10.15485/1617204', '10.15485/3013527']
 doi_type = ['metadata', 'dataset', 'dataset', 'dataset', 'dataset']
 doi_subtype = ['location', 'field', 'field', 'airborne', 'airborne']
 
@@ -24,4 +26,4 @@ df = pd.DataFrame({
     'doi_subtype': doi_subtype
 })
 
-df.to_csv('/store/carroll/sbgplants/out/2018/campaign_metadata.csv', index=False)
+df.to_csv('out/2018/campaign_metadata.csv', index=False)
