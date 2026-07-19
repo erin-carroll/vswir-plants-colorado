@@ -9,7 +9,7 @@ from spectral.io import envi
 import rasterio
 from pyproj import Transformer
 
-fp = '/store/carroll/col/data/extractions/CRBU2018_AOP_Crowns.geojson'
+fp = '/pscratch/sd/e/erincarr/col/data/extractions/CRBU2018_AOP_Crowns.geojson'
 plots = gpd.read_file(fp)
 plots = plots.rename(columns={'SiteCode': 'plot_name'})
 plots['campaign_name'] = 'East River 2018'
@@ -19,15 +19,19 @@ plots = plots.to_crs(epsg=32613)
 poly = plots.geometry.union_all()
 
 dfs = []
-fps = glob(f'/store/carroll/col/data/2018/raw/L1/radianceH5/*/NEON_D13_CRBU_DP1_*_radiance.h5')
+fps = glob(f'/global/cfs/cdirs/neon_aop/10-15485-1617204/v2/2018_CRBU_1/L1/Spectrometer/RadianceH5/*/NEON_D13_CRBU_DP1_*_radiance_v2.h5')
 
 for fp in fps:
-    date = os.path.basename(fp).split('_')[4]
-    time = os.path.basename(fp).split('_')[5]
-    fid = f'NIS01_{date}_{time}'
+    print(fp)
+    with h5py.File(fp, "r") as f:
+        time = f[f'/CRBU/Radiance'].attrs['Acquisition_Time']
+    acquisition_date = time.split(',')[0]
+    acquisition_start_time = time.split(',')[1].replace('[Computer Time in sec]', '').strip()
+    fid = f'NIS01_{acquisition_date.replace("-", "")}_{acquisition_start_time}'
     print(fid)
 
     # get rows and cols of px within plot polys
+    print('igm')
     with h5py.File(fp, "r") as f:
         igm = f['/CRBU/Radiance/Metadata/Ancillary_Rasters/IGM_Data'][:]
     x = igm[:, :, 0]
@@ -45,6 +49,7 @@ for fp in fps:
     elev = igm[rows, cols, -1]
     del igm
 
+    print('obs')
     # obs
     with h5py.File(fp, "r") as f:
         obs = f['/CRBU/Radiance/Metadata/Ancillary_Rasters/OBS_Data'][:]
@@ -62,13 +67,30 @@ for fp in fps:
     del obs
 
     # glt
-    glt = envi.open(glob(f'/store/carroll/col/data/2018/raw/L1/radianceENVI/*/{fid}_rdn_ort_glt.hdr')[0]).open_memmap()
+    print('     glt')
+    with h5py.File(fp, "r") as f:
+        glt = f[f'/CRBU/Radiance/Metadata/Ancillary_Rasters/GLT_Data'][:]
     glt_col = glt[rows, cols, 0]
     glt_row = glt[rows, cols, 1]
 
     # shade
     with rasterio.open(f'/store/carroll/col/data/2018/shade/{fid}_shade.tif') as shade:
         shade_mask = shade.read(1)[rows, cols]
+
+    # radiance
+    print('     rdn')
+    rdns = []
+    with h5py.File(fp, "r") as f:
+        rdn_int = f[f'/CRBU/Radiance/RadianceIntegerPart']
+        rdn_dec = f[f'/CRBU/Radiance/RadianceDecimalPart']
+        scale_factor = rdn_dec.attrs['Scale_Factor']
+        for i in range(len(rows)):
+            rdn_int_ = rdn_int[rows[i], cols[i], :].reshape(1, -1)
+            rdn_dec_ = rdn_dec[rows[i], cols[i], :].reshape(1, -1)/scale_factor
+            rdn_ = rdn_int_ + rdn_dec_
+            rdn_ = pd.DataFrame(rdn_, columns=[str(x) for x in range(rdn_.shape[-1])])
+            rdns.append(rdn_)
+    rdn = pd.concat(rdns, axis=0, ignore_index=True)
 
     # build df
     df = pd.DataFrame({
@@ -80,7 +102,7 @@ for fp in fps:
         'lon': lon,
         'lat': lat,
         'elevation': elev,
-        'shade_mask': shade_mask,
+        # 'shade_mask': shade_mask,
         'path_length': path_length,
         'to_sensor_azimuth': to_sensor_azimuth,
         'to_sensor_zenith': to_sensor_zenith,
@@ -92,16 +114,6 @@ for fp in fps:
         'cosine_i': cosine_i,
         'utc_time': utc_time,
     })
-
-    # add radiance
-    rdns = []
-    with h5py.File(fp, "r") as f:
-        rdn = f['/CRBU/Radiance/Radiance_Data']
-        for i in range(len(rows)):
-            rdn_ = rdn[rows[i], cols[i], :].reshape(1, -1)
-            rdn_ = pd.DataFrame(rdn_, columns=[str(x) for x in range(rdn_.shape[-1])])
-            rdns.append(rdn_)
-    rdn = pd.concat(rdns, axis=0, ignore_index=True)
     df = pd.concat([df.reset_index(drop=True), rdn], axis=1)
 
     # join back to plot attributes
@@ -112,21 +124,18 @@ for fp in fps:
         how="inner",
         predicate="within"
     )
-    meta_cols = ['plot_name', 'campaign_name', 'sensor_name', 'granule_id', 'glt_row', 'glt_column', 'lon', 'lat', 'elevation', 'shade_mask', 'path_length', 'to_sensor_azimuth', 'to_sensor_zenith', 'to_sun_azimuth', 'to_sun_zenith', 'solar_phase', 'slope', 'aspect', 'cosine_i', 'utc_time']
+    meta_cols = ['plot_name', 'campaign_name', 'sensor_name', 'granule_id', 'glt_row', 'glt_column', 'lon', 'lat', 'elevation', 'path_length', 'to_sensor_azimuth', 'to_sensor_zenith', 'to_sun_azimuth', 'to_sun_zenith', 'solar_phase', 'slope', 'aspect', 'cosine_i', 'utc_time'] # 'shade_mask', 
     band_cols = [str(i) for i in range(426)]
     df = df[meta_cols+band_cols]
+    df = df[df['elevation']!=-9999] # drop na px
 
     dfs.append(df)
 
 df = pd.concat(dfs, axis=0, ignore_index=True)
-df = df[df['shade_mask']!=-9999] # drop na px
-df.to_csv('/store/carroll/sbgplants/out/2018/spectra.csv', index=False)
-print('exported', df.shape)
 
-# final patches
-df = pd.read_csv('/store/carroll/sbgplants/out/2018/spectra.csv')
 # switch shade convention (0=shade, 1=sunlit -> 1=shade, 0=sunlit)
-df['shade_mask'] = 1-df['shade_mask']
+# df['shade_mask'] = 1-df['shade_mask']
+
 # remove negatives/duplicates from glt row/col
 df['glt_row'] = df['glt_row'].abs()
 df['glt_column'] = df['glt_column'].abs()
@@ -137,4 +146,5 @@ transformer = Transformer.from_crs("EPSG:32613", "EPSG:4326", always_xy=True)
 lon, lat = transformer.transform(df['lon'].values, df['lat'].values)
 df['lon'] = lon
 df['lat'] = lat
-df.to_csv('/store/carroll/sbgplants/out/2018/spectra_20260506.csv', index=False)
+
+df.to_csv('/pscratch/sd/e/erincarr/col/data/extractions/spectra_2018.csv', index=False)
