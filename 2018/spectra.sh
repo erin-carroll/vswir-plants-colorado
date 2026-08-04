@@ -16,6 +16,6 @@ for f in "${FID_FILES[@]}"; do
         --mem=150G \
         --output=/home/carroll/logs/%j_%x.out \
         --error=/home/carroll/logs/%j_%x.err \
-        --wrap="python /store/carroll/repos/vswir-plants-colorado/2025/spectra.py --fid ${fid}"
+        --wrap="python /store/carroll/repos/vswir-plants-colorado/2018/spectra.py --fid ${fid}"
   done < "$f"
 done

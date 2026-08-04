@@ -22,13 +22,16 @@ dfs = []
 fps = glob(f'/global/cfs/cdirs/neon_aop/10-15485-1617204/v2/2018_CRBU_1/L1/Spectrometer/RadianceH5/*/NEON_D13_CRBU_DP1_*_radiance_v2.h5')
 
 for fp in fps:
-    print(fp)
     with h5py.File(fp, "r") as f:
         time = f[f'/CRBU/Radiance'].attrs['Acquisition_Time']
     acquisition_date = time.split(',')[0]
     acquisition_start_time = time.split(',')[1].replace('[Computer Time in sec]', '').strip()
     fid = f'NIS01_{acquisition_date.replace("-", "")}_{acquisition_start_time}'
     print(fid)
+
+    fp_out = f'/pscratch/sd/e/erincarr/col/data/extractions/csvs/spectra_2018_{fid}.csv'
+    if os.path.exists(fp_out):
+        continue
 
     # get rows and cols of px within plot polys
     print('igm')
@@ -73,9 +76,9 @@ for fp in fps:
     glt_col = glt[rows, cols, 0]
     glt_row = glt[rows, cols, 1]
 
-    # shade
-    with rasterio.open(f'/store/carroll/col/data/2018/shade/{fid}_shade.tif') as shade:
-        shade_mask = shade.read(1)[rows, cols]
+    # # shade
+    # with rasterio.open(f'/store/carroll/col/data/2018/shade/{fid}_shade.tif') as shade:
+    #     shade_mask = shade.read(1)[rows, cols]
 
     # radiance
     print('     rdn')
@@ -128,9 +131,12 @@ for fp in fps:
     band_cols = [str(i) for i in range(426)]
     df = df[meta_cols+band_cols]
     df = df[df['elevation']!=-9999] # drop na px
+    df.to_csv(fp_out, index=False)
+print('done')
 
-    dfs.append(df)
-
+fps = glob('/pscratch/sd/e/erincarr/col/data/extractions/csvs/*.csv')
+print(f"Found {len(fps)} CSV files.")
+dfs = [pd.read_csv(fp) for fp in fps]
 df = pd.concat(dfs, axis=0, ignore_index=True)
 
 # switch shade convention (0=shade, 1=sunlit -> 1=shade, 0=sunlit)
