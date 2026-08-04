@@ -12,9 +12,9 @@ elevation_source = 'NEON AOP Lidar'
 
 # 2025
 # to add more traits later
-doi = ['10.15485/3029300', '10.15485/3022242', '10.15485/3017965', '10.15485/3013535'] # crown polygons, LAI, radiance, reflectance
-doi_type = ['metadata', 'dataset', 'dataset', 'dataset']
-doi_subtype = ['location', 'field', 'airborne', 'airborne']
+doi = ['10.15485/3014404', '10.15485/3029300', '10.15485/3022242', '10.15485/3017965', '10.15485/3013535'] # crown polygons, LAI, radiance, reflectance
+doi_type = ['metadata', 'metadata', 'dataset', 'dataset', 'dataset']
+doi_subtype = ['location', 'field', 'field', 'airborne', 'airborne']
 
 df = pd.DataFrame({
     'campaign_name': campaign_name,

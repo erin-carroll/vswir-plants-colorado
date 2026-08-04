@@ -69,7 +69,7 @@ fractional_cover = fractional_cover[['plot_name', 'sample_name', 'taxa', 'veg_or
 
 df = pd.merge(df, fractional_cover, on='plot_name', how='outer', suffixes=('',''))
 df['plant_status'] = 'Not recorded'
-df['canopy position'] = 'Not recorded'
+df['canopy_position'] = 'Not recorded'
 
 # traits - lma site
 lma_site = pd.read_csv('data\\col_2018\\raw\\10.15485.1618132\\data\\lma_site_samples.csv')
