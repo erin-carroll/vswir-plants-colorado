@@ -5,7 +5,7 @@ import numpy as np
 
 os.chdir('C:\\Users\\carroll\\Documents\\sbgplant')
 
-df = pd.read_csv('data\\col_2018\\raw\\10.15485.1618130\\data\\sample_site.csv')
+df = pd.read_csv('data\\2018\\raw\\10.15485.1618130\\data\\sample_site.csv')
 df = df.rename(columns={'SampleSiteCode': 'plot_name', 'VegetationType': 'plot_veg_type'})
 df['campaign_name'] = 'East River 2018'
 df['collection_date'] = (df['Year'].astype(str) + '-' + df['Month'].astype(str) + '-' + df['Day'].astype(str))
@@ -27,7 +27,7 @@ df['floristic_survey'] = df['plot_veg_type'].map(floristic_survey)
 df = df[['plot_name', 'SamplingArea', 'campaign_name', 'collection_date', 'plot_veg_type','subplot_cover_method', 'floristic_survey']]
 
 # sample
-fractional_cover = pd.read_csv('data\\col_2018\\raw\\10.15485.1618130\\data\\fractional_cover.csv')
+fractional_cover = pd.read_csv('data\\2018\\raw\\10.15485.1618130\\data\\fractional_cover.csv')
 fractional_cover = fractional_cover.rename(columns={'SampleSiteCode': 'plot_name'})
 # fix some errors
 fractional_cover.loc[fractional_cover.CoverCode=='engelmann', 'CoverCode'] = 'Engelmann'
@@ -39,7 +39,7 @@ agg_ = {'SamplingArea': 'first', 'CollectionDate': 'first', 'FractionalCover': '
 fractional_cover = (fractional_cover.groupby(keys, dropna=False, sort=False).agg(agg_).reset_index())
 
 # get taxa from spp list
-species_list = pd.read_csv('data\\col_2018\\raw\\10.15485.1618130\\data\\species_list.csv')
+species_list = pd.read_csv('data\\2018\\raw\\10.15485.1618130\\data\\species_list.csv')
 species_list['taxa'] = species_list['Genus'] + ' ' + species_list['Species']
 species_list.loc[species_list['taxa'].isna(), 'taxa'] = species_list.loc[species_list['Genus'].isna(), 'CoverCode']
 species_list = species_list[['CoverCode', 'taxa', 'veg_or_cover_type']]
@@ -56,7 +56,7 @@ fc_class = {
     'Forb': 'pv',
     'NPV': 'npv',
     'Bare': 'soil',
-    'Grass': 'pv',
+    'Graminoid': 'pv',
     'Low Shrub': 'pv',
     'Needleleaf': 'pv',
     'Low shrub': 'pv',
@@ -65,6 +65,21 @@ fc_class = {
 fractional_cover['sample_fc_class'] = fractional_cover['veg_or_cover_type'].map(fc_class)
 fractional_cover = fractional_cover.rename(columns={'FractionalCover': 'sample_fc_percent'})
 
+# sum fractional cover over pv per site
+fractional_cover = fractional_cover[fractional_cover['sample_fc_class']=='pv']
+fractional_cover = (
+    fractional_cover.groupby('plot_name', as_index=False)
+      .agg({
+          'sample_name': 'first',
+          'taxa': 'first',
+          'veg_or_cover_type': 'first',
+          'phenophase': 'first',
+          'sample_fc_class': 'first',
+          'sample_fc_percent': 'sum',
+          'CoverCode': 'first'
+      })
+)
+
 fractional_cover = fractional_cover[['plot_name', 'sample_name', 'taxa', 'veg_or_cover_type', 'phenophase', 'sample_fc_class', 'sample_fc_percent', 'CoverCode']]
 
 df = pd.merge(df, fractional_cover, on='plot_name', how='outer', suffixes=('',''))
@@ -72,7 +87,7 @@ df['plant_status'] = 'Not recorded'
 df['canopy_position'] = 'Not recorded'
 
 # traits - lma site
-lma_site = pd.read_csv('data\\col_2018\\raw\\10.15485.1618132\\data\\lma_site_samples.csv')
+lma_site = pd.read_csv('data\\2018\\raw\\10.15485.1618132\\data\\lma_site_samples.csv')
 lma_site.loc[lma_site.Species=='engelmann', 'Species'] = 'Engelmann'
 lma_site = lma_site[['SampleSiteCode', 'Species', 'Wet_Weight_g', 'Dry_Weight_g', 'LMA_gm2', 'LWC_%']]
 lma_site = lma_site.rename(columns={
@@ -110,7 +125,7 @@ lma_site['error_type'] = None
 df_lma_site = pd.merge(df, lma_site, left_on=['plot_name', 'CoverCode'], right_on=['plot_name', 'CoverCode'], how='right', suffixes=('',''))
 
 # traits - foliar chemistry
-chem = pd.read_csv('data\\col_2018\\raw\\10.15485.1631278\\data\\CN_Results_Foliar.csv')
+chem = pd.read_csv('data\\2018\\raw\\10.15485.1631278\\data\\CN_Results_Foliar.csv')
 chem = chem.rename(columns={
     'SampleSiteCode':'plot_name',
     'N_weight_percent': 'Nitrogen',
@@ -145,14 +160,14 @@ df_chem = pd.merge(df_, chem, on='plot_name', how='right', suffixes=('',''))
 df_chem.loc[df_chem['plot_veg_type']=='Meadow', 'taxa'] = 'Herbaceous aggregate sample'
 df_chem.loc[df_chem['plot_veg_type']=='Meadow', 'veg_or_cover_type'] = 'Herbaceous aggregate sample'
 df_chem.loc[df_chem['plot_veg_type']=='Meadow', 'sample_fc_class'] = 'pv'
-df_chem.loc[df_chem['plot_veg_type']=='Meadow', 'sample_fc_percent'] = 100
+# df_chem.loc[df_chem['plot_veg_type']=='Meadow', 'sample_fc_percent'] = 100
 df_chem = df_chem.drop_duplicates().reset_index(drop=True)
 
 df = pd.concat([df_lma_site, df_chem], ignore_index=True)
 df = df[['plot_name', 'campaign_name', 'collection_date', 'plot_veg_type',
          'subplot_cover_method', 'floristic_survey',
          'sample_name', 'taxa', 'veg_or_cover_type', 'phenophase', 
-         'sample_fc_class', 'sample_fc_percent', 'plant_status', 'canopy position',
+         'sample_fc_class', 'sample_fc_percent', 'plant_status', 'canopy_position',
          'trait', 'value', 'method', 'handling', 'units', 'error', 'error_type']]
 print(df.shape)
 
@@ -161,5 +176,12 @@ plots = gpd.read_file('out/2018/plots.geojson')
 plots = plots['plot_name'].unique()
 df = df[df['plot_name'].isin(plots)].reset_index(drop=True)
 print(df.shape)
+
+# update veg_or_cover_type assignments
+df.loc[df['plot_veg_type'].eq('Shrub'), 'veg_or_cover_type'] = 'Low shrub'
+
+# drop 
+df = df[~df['sample_fc_percent'].isna()] # where missing pv fractional cover estimate
+df = df[~df['value'].isna()]
 
 df.to_csv('out/2018/traits.csv', index=False)
