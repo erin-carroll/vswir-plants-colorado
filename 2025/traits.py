@@ -21,6 +21,11 @@ for fp in fps:
     dfs.append(df)
 df = pd.concat(dfs, ignore_index=True)
 
+# fix NA
+mask = df['Site_Number'].eq(1146)
+df.loc[mask, 'Location_Type'] = 'meadow'
+df.loc[mask, 'Collection_Date'] = '6/28/2025'
+
 df = df[df['Location_Type'].notna()]
 df['Location_Type'] = df['Location_Type'].str.capitalize()
 
@@ -85,7 +90,7 @@ df['canopy_position'] = 'Not recorded'
 df['trait'] = 'LAI'
 df['method'] = 'Field measured'
 df['handling'] = 'Fresh'
-df['units'] = 'unitless'
+df['units'] = 'ratio'
 df['error_type'] = 'Standard error of measurement'
 
 # join value, error
