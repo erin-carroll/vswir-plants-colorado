@@ -141,4 +141,12 @@ print(df.shape)
 df = df[df['value'].notna()]
 print(df.shape)
 
+# any duplicates?
+# tmp = df[df.duplicated(subset=['plot_name', 'campaign_name', 'collection_date', 'sample_name', 'trait'], keep=False)]
+# print(tmp.shape)
+# print(tmp)
+# just one duplicated, from site_cleaned. Remove
+df = df.drop_duplicates()
+print(df.shape)
+
 df.to_csv('out/2025/traits.csv', index=False)

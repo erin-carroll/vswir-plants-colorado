@@ -64,4 +64,10 @@ gdf = gdf.to_crs(4326)
 
 print(gdf.shape)
 
+# filter to plots with traits
+traits = pd.read_csv(r'C:\Users\carroll\Documents\sbgplant\out\2025\traits.csv')
+gdf = gdf[gdf['plot_name'].isin(traits['plot_name'])].reset_index(drop=True)
+print(gdf.shape)
+
 gdf.to_file('C:/Users/carroll/Documents/sbgplant/out/2025/plots.geojson', driver='GeoJSON')
+
