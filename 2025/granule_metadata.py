@@ -56,5 +56,9 @@ df = pd.DataFrame({
     'flightline_id': granule_ids,
     'granule_rad_url': [None] * len(granule_ids),
     'granule_refl_url': [None] * len(granule_ids)
-})
+# })
+
+df['cloudy_conditions'] = df['cloudy_conditions'].str.lower()
+df['cloud_type'] = df['cloud_type'].str.lower()
+
 df.to_csv('/store/carroll/sbgplants/out/2025/granule_metadata.csv', index=False)

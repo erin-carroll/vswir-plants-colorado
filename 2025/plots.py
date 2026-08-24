@@ -16,14 +16,15 @@ gdf = gdf.rename(columns={
     })
 
 gdf['campaign_name'] = 'Colorado Headwaters Ecological Spectroscopy Study'
-gdf['extraction_method'] = 'Internal centroids'
-gdf['delineation_method'] = 'Posthoc'
+gdf['extraction_method'] = 'internal centroids'
+gdf['delineation_method'] = 'posthoc'
 
 # plot type
+gdf['site_type'] = gdf['site_type'].str.lower()
 plot_type = {
-    'Meadow': 'Plot',
-    'Tree': 'Individual',
-    'Shrub': 'Individual'
+    'meadow': 'plot',
+    'tree': 'individual',
+    'shrub': 'individual'
 }
 gdf['plot_method'] = gdf['site_type'].map(plot_type)
 
@@ -67,4 +68,3 @@ gdf = gdf.to_crs(4326)
 print(gdf.shape)
 
 gdf.to_file('out/2025/plots.geojson', driver='GeoJSON')
-
