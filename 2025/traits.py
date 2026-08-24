@@ -4,7 +4,7 @@ import geopandas as gpd
 import numpy as np
 from glob import glob 
 
-os.chdir('C:/Users/carroll/Documents/sbgplant')
+os.chdir('C:/Users/erinc/Documents/sbgplant')
 
 fps = glob('data/2025/loc/*site_cleaned.csv')
 
@@ -14,7 +14,7 @@ for fp in fps:
     df = pd.read_csv(fp)
     if 'meadow' in fp:
         df = df[['Location_Type', 'Site_Number', 'Collection_Date']]
-        df['Vegetation_Species'] = 'Herbaceous aggregate sample'
+        df['Vegetation_Species'] = 'not recorded'
     else:
         df = df[['Location_Type', 'Site_Number', 'Collection_Date', 'Vegetation_Species']]
         df['Vegetation_Species'] = [x.split('-')[-1] for x in df['Vegetation_Species']]
@@ -27,7 +27,6 @@ df.loc[mask, 'Location_Type'] = 'meadow'
 df.loc[mask, 'Collection_Date'] = '6/28/2025'
 
 df = df[df['Location_Type'].notna()]
-df['Location_Type'] = df['Location_Type'].str.capitalize()
 
 df = df.rename(columns={
     'Site_Number': 'plot_name',
@@ -38,16 +37,16 @@ df = df.rename(columns={
 df['campaign_name'] = 'Colorado Headwaters Ecological Spectroscopy Study'
 
 subplot_cover_method = {
-    'Meadow': 'Quadrat',
-    'Tree': 'Visual assessment',
-    'Shrub': 'Visual assessment'
+    'meadow': 'quadrat',
+    'tree': 'visual assessment',
+    'shrub': 'visual assessment'
 }
 df['subplot_cover_method'] = df['plot_veg_type'].map(subplot_cover_method)
 
 floristic_survey = {
-    'Meadow': 1,
-    'Tree': 0,
-    'Shrub': 0
+    'meadow': 1,
+    'tree': 0,
+    'shrub': 0
 }
 df['floristic_survey'] = df['plot_veg_type'].map(floristic_survey)
 
@@ -60,9 +59,7 @@ df = df[['plot_name', 'campaign_name', 'collection_date', 'plot_veg_type','subpl
 tmp = pd.read_csv('data/2025/veg_or_cover_type.csv')[['taxa', 'veg_or_cover_type']]
 df = pd.merge(df, tmp, how='left', on='taxa')
 
-df['phenophase'] = 'Not recorded'
-
-frac = pd.read_csv(r"C:\Users\carroll\Documents\sbgplant\data\2025\loc\chess_meadow_cover_cleaned.csv")
+frac = pd.read_csv('data/2025/loc/chess_meadow_cover_cleaned.csv')
 frac['Cover_Type'] = [x.split(' ')[0] for x in frac['Cover_Type']]
 frac['Cover_Class_Name'][frac['Cover_Type']=='Live'] = 'pv'
 frac['Cover_Class_Name'][frac['Cover_Class_Name']=='Nonvegetated Dirt'] = 'soil'
@@ -77,21 +74,37 @@ frac = frac.rename(columns={
     })
 
 df = pd.merge(df, frac, how='outer', on='plot_name')
-df.loc[df['plot_veg_type'].isin(['Tree', 'Shrub']), 'sample_fc_class'] = 'pv'
-df.loc[df['plot_veg_type'].isin(['Tree', 'Shrub']), 'sample_fc_percent'] = 100
-df.loc[df['sample_fc_class'].isin(['npv', 'soil']), 'sample_name'] = pd.NA
-df.loc[df['sample_fc_class'].isin(['npv', 'soil']), 'taxa'] = pd.NA
-df.loc[df['sample_fc_class']=='npv', 'veg_or_cover_type'] = 'NPV'
-df.loc[df['sample_fc_class']=='soil', 'veg_or_cover_type'] = 'Bare'
 
-df['plant_status'] = 'Not recorded'
-df['canopy_position'] = 'Not recorded'
+# fractional cover, tree & shrub
+df['sample_fc_class'] = df['sample_fc_class'].str.strip()
+df.loc[df['plot_veg_type'].isin(['tree', 'shrub']), 'sample_fc_class'] = 'pv'
+df.loc[df['plot_veg_type'].isin(['tree', 'shrub']), 'sample_fc_percent'] = 100
 
-df['trait'] = 'LAI'
-df['method'] = 'Field measured'
-df['handling'] = 'Fresh'
+# fractional cover, meadow
+df.loc[df['sample_fc_class']=='Non-Photosynthetic Vegetation', 'sample_fc_class'] = 'npv'
+df.loc[df['sample_fc_class']=='Nonvegetated Dirt', 'sample_fc_class'] = 'soil'
+df.loc[df['sample_fc_class']=='Nonvegetated Rock', 'sample_fc_class'] = 'rock' # is this soil, or should we add another enum for rock?
+df.loc[df['sample_fc_class']=='Other Moss/Lichen', 'sample_fc_class'] = 'npv' # moss is pv, lichen is npv? But for veg_or_cover_type logic, we don't want them to be pv?
+df.loc[~df['sample_fc_class'].isin(['npv', 'soil', 'rock']), 'sample_fc_class'] = 'pv'
+
+df.loc[df['sample_fc_class']=='npv', 'veg_or_cover_type'] = 'npv'
+df.loc[df['sample_fc_class']=='soil', 'veg_or_cover_type'] = 'bare'
+df.loc[df['sample_fc_class']=='rock', 'veg_or_cover_type'] = 'bare'
+
+# dissolve pv columns
+df = df.groupby(['plot_name', 'campaign_name', 'collection_date', 'plot_veg_type', 'subplot_cover_method', 'floristic_survey', 'sample_name', 'taxa', 'veg_or_cover_type', 'sample_fc_class']).agg({
+          'sample_fc_percent': 'sum',
+      }).reset_index()
+
+df['phenophase'] = 'not recorded'
+df['plant_status'] = 'not recorded'
+df['canopy_position'] = 'not recorded'
+
+df['trait'] = 'lai'
+df['method'] = 'field measured'
+df['handling'] = 'fresh'
 df['units'] = 'ratio'
-df['error_type'] = 'Standard error of measurement'
+df['error_type'] = 'standard error of measurement'
 
 # join value, error
 fps = glob('data/2025/lai/*cleaned.csv')
@@ -130,23 +143,18 @@ df = df[['plot_name', 'campaign_name', 'collection_date', 'plot_veg_type',
          'trait', 'value', 'method', 'handling', 'units', 'error', 'error_type']]
 print(df.shape)
 
-# filter traits to only where plot has a polygon
-plots = gpd.read_file('out/2025/plots.geojson')
-plots = plots['plot_name'].unique()
-df = df[df['plot_name'].isin(plots)].reset_index(drop=True)
-print(df.shape)
-
-# filter to where there is actually a measurement
-# df = df.groupby('plot_name').filter(lambda g: g['value'].notna().any())
-df = df[df['value'].notna()]
-print(df.shape)
+# blank columns with no trait measurement
+mask = df['value'].isna()
+blank_cols = ['sample_name', 'trait', 'value', 'method','handling', 'units', 'error', 'error_type']
+df.loc[mask, blank_cols] = pd.NA
+df.loc[df['sample_fc_class']!='pv', 'taxa'] = pd.NA
 
 # any duplicates?
-# tmp = df[df.duplicated(subset=['plot_name', 'campaign_name', 'collection_date', 'sample_name', 'trait'], keep=False)]
-# print(tmp.shape)
+tmp = df[df.duplicated(subset=['plot_name', 'campaign_name', 'collection_date', 'sample_fc_class'], keep=False)]
+print(tmp.shape)
 # print(tmp)
-# just one duplicated, from site_cleaned. Remove
-df = df.drop_duplicates()
-print(df.shape)
+# just one duplicated, error from site_cleaned. Remove
+# df = df.drop_duplicates()
+# print(df.shape)
 
 df.to_csv('out/2025/traits.csv', index=False)
