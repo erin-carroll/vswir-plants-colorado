@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-os.chdir('C:/Users/carroll/Documents/sbgplant')
+os.chdir('C:/Users/erinc/Documents/sbgplant')
 
 campaign_name = 'East River 2018'
 primary_funding_source = 'DOE'

@@ -153,4 +153,6 @@ lon, lat = transformer.transform(df['lon'].values, df['lat'].values)
 df['lon'] = lon
 df['lat'] = lat
 
+df['shade_mask'] = pd.NA
+
 df.to_csv('/pscratch/sd/e/erincarr/col/data/extractions/spectra_2018.csv', index=False)

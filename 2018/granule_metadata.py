@@ -62,6 +62,8 @@ df = pd.DataFrame({
     'granule_rad_url': ['https://data.ess-dive.lbl.gov/datasets/doi:10.15485/3017966 '] * len(granule_ids),
     'granule_refl_url': ['https://data.ess-dive.lbl.gov/datasets/doi:10.15485/3013527'] * len(granule_ids)
 })
+
+df['cloudy_conditions'] = df['cloudy_conditions'].str.lower()
+df['cloud_type'] = df['cloud_type'].str.lower()
+
 df.to_csv('/store/carroll/sbgplants/out/2018/granule_metadata.csv', index=False)
-print(df.shape)
-print('exported')
