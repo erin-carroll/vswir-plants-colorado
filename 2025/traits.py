@@ -149,6 +149,9 @@ blank_cols = ['sample_name', 'trait', 'value', 'method','handling', 'units', 'er
 df.loc[mask, blank_cols] = pd.NA
 df.loc[df['sample_fc_class']!='pv', 'taxa'] = pd.NA
 
+# populate missing sample names
+df['sample_name'] = df['sample_name'].fillna(df['plot_name'].astype(str) + '_fc_' + df['sample_fc_class'])
+
 # any duplicates?
 tmp = df[df.duplicated(subset=['plot_name', 'campaign_name', 'collection_date', 'sample_fc_class'], keep=False)]
 print(tmp.shape)

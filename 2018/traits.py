@@ -171,4 +171,7 @@ print(df.shape)
 df = df[~df['sample_fc_percent'].isna()]
 # df = df[~df['value'].isna()]
 
+# populate missing sample names
+df['sample_name'] = df['sample_name'].fillna(df['plot_name'].astype(str) + '_fc_' + df['sample_fc_class'])
+
 df.to_csv('out/2018/traits.csv', index=False)
