@@ -64,7 +64,7 @@ df = df.groupby(['plot_name', 'campaign_name', 'collection_date', 'plot_veg_type
           'FractionalCover': 'sum'}).reset_index()
 
 df.loc[df['veg_or_cover_type'].isin(['bare', 'moss', 'npv']), 'sample_name'] = pd.NA
-df.loc[df['veg_or_cover_type'].isin(['bare', 'moss', 'npv']), 'taxa'] = pd.NA
+df.loc[df['veg_or_cover_type'].isin(['bare', 'moss', 'npv']), 'taxa'] = 'not recorded'
 df.loc[df['veg_or_cover_type']=='herbaceous aggregate sample', 'taxa'] = 'not recorded'
 
 df = df.rename(columns={'FractionalCover': 'sample_fc_percent'})
@@ -85,6 +85,7 @@ df['plant_status'] = 'not recorded'
 df['canopy_position'] = 'not recorded'
 
 df = df[['plot_name', 'campaign_name', 'collection_date', 'plot_veg_type','subplot_cover_method', 'floristic_survey', 'sample_name', 'taxa', 'veg_or_cover_type', 'phenophase', 'sample_fc_class', 'sample_fc_percent', 'plant_status', 'canopy_position']]
+df.to_csv('out/2018/df_tmp.csv', index=False)
 
 # traits - lma (tree, shrub only. Meadow lma data was not collected per-plot, but rather as a composite sample across the sampling areas)
 lma_site = pd.read_csv('data\\2018\\raw\\10.15485.1618132\\data\\lma_site_samples.csv')
@@ -122,7 +123,11 @@ lma_site['error_type'] = None
 
 lma_site['sample_fc_class'] = 'pv'
 
-df_lma_site = pd.merge(df, lma_site, on=['plot_name', 'sample_fc_class'], how='outer', suffixes=('',''))
+# filter NAs
+lma_site = lma_site[~lma_site['value'].isna()]
+
+df_lma_site = pd.merge(df, lma_site, on=['plot_name', 'sample_fc_class'], how='right', suffixes=('',''))
+df_lma_site.to_csv('out/2018/df_lma_site_tmp.csv', index=False)
 
 # traits - foliar chemistry
 chem = pd.read_csv('data\\2018\\raw\\10.15485.1631278\\data\\CN_Results_Foliar.csv')
@@ -156,14 +161,20 @@ chem['error_type'] = None
 
 chem['sample_fc_class'] = 'pv'
 
-df_chem = pd.merge(df, chem, on=['plot_name', 'sample_fc_class'], how='outer', suffixes=('',''))
+df_chem = pd.merge(df, chem, on=['plot_name', 'sample_fc_class'], how='right', suffixes=('',''))
+df_chem = df_chem[df_chem['sample_fc_class']=='pv'] # other fc types already covered by df_lma
+df_chem.to_csv('out/2018/df_chem_tmp.csv', index=False)
 
-df = pd.concat([df_lma_site, df_chem], ignore_index=True)
+# merge
+df = df[df['sample_fc_class']!='pv']
+df[['trait', 'value', 'method', 'handling', 'units', 'error', 'error_type']] = None
+df = pd.concat([df, df_lma_site, df_chem], ignore_index=True)
 df = df[['plot_name', 'campaign_name', 'collection_date', 'plot_veg_type',
          'subplot_cover_method', 'floristic_survey',
          'sample_name', 'taxa', 'veg_or_cover_type', 'phenophase', 
          'sample_fc_class', 'sample_fc_percent', 'plant_status', 'canopy_position',
          'trait', 'value', 'method', 'handling', 'units', 'error', 'error_type']]
+df.sort_values('plot_name', inplace=True)
 print(df.shape)
 
 # qaqc
