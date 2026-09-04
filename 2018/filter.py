@@ -34,6 +34,7 @@ print('\nplots')
 print(plots.shape) 
 plots = plots[plots['plot_name'].isin(plot_names)].reset_index(drop=True)
 print(plots.shape)
+# losing two plots (468, 464) because they don't have any traits
 
 # filter spectra
 print('\nspectra')
@@ -46,6 +47,15 @@ print('\ngranule')
 print(granule.shape)
 granule = granule[granule['granule_id'].isin(spectra['granule_id'])].reset_index(drop=True)
 print(granule.shape)
+
+# do we have granule metadata for all granules in spectra and plot tables?
+print('\ngranule metadata completeness')
+print(f"Granules in spectra: {spectra['granule_id'].nunique()}")
+print(f"Granules in granule metadata: {granule['granule_id'].nunique()}")
+print(f"Granules in plots: {plots['granule_id'].nunique()}")
+print(f"Granules in spectra not in granule metadata: {set(spectra['granule_id']) - set(granule['granule_id'])}")
+print(f"Granules in granule metadata not in spectra: {set(granule['granule_id']) - set(spectra['granule_id'])}")
+print(f"Granules in plots not in granule metadata: {set(plots['granule_id']) - set(granule['granule_id'])}")
 
 traits.to_csv('out/2018/filtered/traits.csv', index=False)
 plots.to_file('out/2018/filtered/plots.geojson', driver='GeoJSON')
